@@ -38,7 +38,43 @@ Theta2_grad = zeros(size(Theta2));
 %         variable J. After implementing Part 1, you can verify that your
 %         cost function computation is correct by verifying the cost
 %         computed in ex4.m
-%
+
+
+% Add ones to the X data matrix
+X = [ones(m, 1) X];
+% Convert y from (1-10) class into num_labels vector
+yd = eye(num_labels);
+y = yd(y,:);
+ 
+%%% Map from Layer 1 to Layer 2
+a1=X;
+% Coverts to matrix of 5000 examples x 26 thetas
+z2=X*Theta1';
+% Sigmoid function converts to p between 0 to 1
+a2=sigmoid(z2);
+
+%%% Map from Layer 2 to Layer 3
+% Add ones to the h1 data matrix
+a2=[ones(m, 1) a2];
+% Converts to matrix of 5000 exampls x num_labels 
+z3=a2*Theta2';
+% Sigmoid function converts to p between 0 to 1
+a3=sigmoid(z3);
+
+% Compute cost
+%logisf=(-y)'*log(a3)-(1-y)'*log(1-a3);
+logisf=(-y).*log(a3)-(1-y).*log(1-a3); % Becos y is now a matrix, so use dot product, unlike above
+%J=((1/m).*sum(sum(logisf)));	% This line is correct if there is no regularization
+% Try with ...
+% J=((1/m).*sum((logisf)));  
+% That will give J in 10 columns (it has summed m samples), so need to sum again
+
+%% Regularized cost
+Theta1s=Theta1(:,2:end);
+Theta2s=Theta2(:,2:end);
+J=((1/m).*sum(sum(logisf)))+(lambda/(2*m)).*(sum(sum(Theta1s.^2))+sum(sum(Theta2s.^2)));
+
+
 % Part 2: Implement the backpropagation algorithm to compute the gradients
 %         Theta1_grad and Theta2_grad. You should return the partial derivatives of
 %         the cost function with respect to Theta1 and Theta2 in Theta1_grad and
@@ -54,6 +90,24 @@ Theta2_grad = zeros(size(Theta2));
 %               over the training examples if you are implementing it for the 
 %               first time.
 %
+% Set all the D to zeros
+tridelta_1=0;
+tridelta_2=0;
+
+% Compute delta, tridelta and big D
+	delta_3=a3-y;
+    z2=[ones(m,1) z2];
+	delta_2=delta_3*Theta2.*sigmoidGradient(z2);
+    delta_2=delta_2(:,2:end);
+	tridelta_1=tridelta_1+delta_2'*a1; % Same size as Theta1_grad (25x401)
+    tridelta_2=tridelta_2+delta_3'*a2; % Same size as Theta2_grad (10x26)
+	Theta1_grad=(1/m).*tridelta_1;
+    Theta2_grad=(1/m).*tridelta_2;
+    %Theta1_grad=0;
+	%Theta2_grad=0;
+%end
+
+
 % Part 3: Implement regularization with the cost function and gradients.
 %
 %         Hint: You can implement this around the code for
@@ -63,53 +117,20 @@ Theta2_grad = zeros(size(Theta2));
 %
 
 
-%feed forward to compute a3
-
-a2 = sigmoid([ones(m, 1) X] * Theta1');
-a3 = sigmoid([ones(m, 1) a2] * Theta2'); % m x 10
-
-yvec = zeros(num_labels, m); %10x5000 labels X examples
-
-% transforming a y vector into a matrix with binary column vectors representing a label
-for i=1:m,
-  pos = y(i);
-  yvec(pos, i) = 1;
-  % yvec(:, i) is a column vector of the correct label (10x1)
-  J = J + sum(  (log(a3(i, :)) * -yvec(:, i)) - (  log(1-a3(i, :)) * (1-yvec(:, i))));  
-end
-J = J * (1/m);
-
-% adding regularization to cost
-J = J + (lambda/(2*m)) * ( (sum(sum(Theta1(:, 2:size(Theta1, 2)) .^ 2))) + sum(sum(Theta2(:, 2:size(Theta2, 2)) .^ 2)));
 
 
 
-%backpropagation to compute gradients (changing the values of a2 and a3 so i can use same var name)
-%D = [3, ]; % 3 for the # of layers, and 
 
-for t=1:m,
-  a1 = X(i, :); %1x400
-  
-  z2 = [1 a1] * Theta1';
-  a2 = sigmoid(z2); % 1x25
-  
-  
-  z3 = [1 a2] * Theta2';
-  a3 = sigmoid(z3); % 1x10
-  
-  
-  delta_3 = a3 - yvec(:, i)'; % 1x10
-  
-  delta_2 = (Theta2' * delta_3') .* [1 (sigmoidGradient(z2))]';
-  delta_2 = delta_2(2:end); % 25x1
 
-  Theta1_grad = Theta1_grad + delta_2 * [1 a1];
-  Theta2_grad = Theta2_grad + delta_3' * [1 a2];
-  
-end
 
-Theta1_grad = Theta1_grad * (1/m);
-Theta2_grad = Theta2_grad *(1/m);
+
+
+
+
+
+
+
+
 
 
 
